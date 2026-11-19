@@ -28,7 +28,7 @@ def main() -> None:
         try:
             create_user(
                 db,
-                name=name,
+                full_name=name,
                 email=email,
                 password_hash=PasswordHasher().hash(password),
                 role="admin",

@@ -1,14 +1,13 @@
 # Backend base: Python FastAPI + MySQL
 
-Khung backend chung cho các nhóm thực tập lớp **HN-KS25-CNTT1**. Đã có sẵn:
+Backend ứng dụng báo dành cho lớp **HN-KS25-CNTT1**. Đã có sẵn:
 
 - Kết nối **MySQL** bằng SQLAlchemy + PyMySQL, cấu hình đọc từ file `.env`
-- **CRUD mẫu** cho bảng `items` (thêm / xem / sửa / xoá / tìm kiếm)
 - Đăng ký thành viên, đăng nhập JWT và API lấy thông tin tài khoản hiện tại
 - Mật khẩu được băm bằng Argon2; admin được tạo riêng bằng lệnh CLI, không thể đăng ký qua form công khai
 - Endpoint **health-check** `GET /api/health` kiểm tra kết nối DB
 - **CORS** đã bật để frontend gọi được
-- File `sql/init.sql` tạo database + bảng + dữ liệu mẫu, chạy bằng **MySQL Workbench**
+- File `sql/init.sql` tạo database và 7 bảng tin tức; `python -m app.seed` thêm dữ liệu mẫu
 - Trang tài liệu API tự sinh: http://127.0.0.1:8000/docs
 
 ## 1. Cần cài trước
@@ -30,12 +29,15 @@ backend/
 │   │   ├── config.py      # Đọc cấu hình từ .env
 │   │   └── security.py    # Băm mật khẩu, JWT và kiểm tra quyền
 │   ├── db/session.py      # Kết nối MySQL, hàm get_db()
-│   ├── models/            # Model bảng items và users
+│   ├── models/            # Model Users, Categories, Articles, Images, Comments, Tags, Article_Tags
 │   ├── schemas/           # Schema request/response cho API
-│   ├── crud/              # Truy vấn items và users
-│   ├── routers/           # API health, items và auth
+│   ├── crud/              # Truy vấn users
+│   ├── routers/           # API health và auth
+│   ├── seed.py            # Tạo dữ liệu mẫu bằng SQLAlchemy
 │   └── create_admin.py    # Tạo tài khoản admin bằng prompt an toàn
-├── sql/init.sql           # Tạo database + bảng + dữ liệu mẫu (chạy bằng Workbench)
+├── sql/
+│   ├── init.sql           # Tạo database + 7 bảng (chạy bằng Workbench)
+│   └── migrations/        # Migration từ schema users cũ
 ├── requirements.txt       # Danh sách thư viện Python
 ├── .env.example           # Mẫu file cấu hình
 └── docker-compose.yml     # KHÔNG bắt buộc, xem mục 8
@@ -44,8 +46,8 @@ backend/
 Một request đi qua các lớp như sau:
 
 ```
-Frontend --HTTP--> routers/items.py --> crud/item.py --> models/item.py --> MySQL
-                   (kiểm tra dữ liệu bằng schemas/item.py)
+Frontend --HTTP--> routers/auth.py --> crud/user.py --> models/user.py --> MySQL
+                   (kiểm tra dữ liệu bằng schemas/auth.py)
 ```
 
 ## 3. Bước 1: tạo database bằng MySQL Workbench
@@ -53,10 +55,11 @@ Frontend --HTTP--> routers/items.py --> crud/item.py --> models/item.py --> MySQ
 1. Mở **MySQL Workbench**, bấm vào connection **Local instance MySQL80** (hoặc connection bạn hay dùng), nhập mật khẩu root.
 2. Menu **File → Open SQL Script...**, chọn file `backend/sql/init.sql`.
 3. Bấm nút **tia sét ⚡ (Execute)** để chạy cả file.
-4. Ở khung **SCHEMAS** bên trái, bấm nút **Refresh ⟳**. Thấy `app_db` → `Tables` → `items` là xong.
-5. Chuột phải bảng `items` → **Select Rows - Limit 1000** để xem 2 dòng dữ liệu mẫu.
+4. Ở khung **SCHEMAS** bên trái, bấm nút **Refresh ⟳**. Thấy `app_db` với 7 bảng: `users`, `categories`, `articles`, `article_images`, `comments`, `tags`, `article_tags`.
 
 > Nhớ lại thông tin connection (chuột phải connection ở màn hình Home → **Edit Connection**): **Hostname** (thường `127.0.0.1`), **Port** (thường `3306`), **Username** (thường `root`) và mật khẩu. Bước sau sẽ điền đúng các thông tin này.
+>
+> Nếu nâng cấp database cũ đã có bảng `users` với cột `name` và `is_active`, sau khi chạy `init.sql`, mở và chạy **một lần** `sql/migrations/001_users_news_schema.sql` để chuyển schema tài khoản. Không chạy migration này trên database mới.
 
 ## 4. Bước 2: tạo file `.env`
 
@@ -108,7 +111,23 @@ Khi đầu dòng terminal hiện `(.venv)` là đã kích hoạt. Cài thư vi�
 pip install -r requirements.txt
 ```
 
-## 6. Bước 4: chạy server
+## 6. Bước 4: tạo dữ liệu mẫu
+
+Thêm vào `.env` một mật khẩu seed riêng dài tối thiểu 12 ký tự:
+
+```
+SEED_USER_PASSWORD=mat_khau_mau_tu_12_ky_tu
+```
+
+Sau khi đã tạo database bằng MySQL Workbench và cài dependencies, chạy tại thư mục `backend/`:
+
+```bash
+python -m app.seed
+```
+
+Lệnh tạo dữ liệu mẫu cho tài khoản biên tập/độc giả, danh mục, bài viết, ảnh, bình luận và tag. Có thể chạy lại an toàn; các bản ghi đã có sẽ được giữ nguyên. Mật khẩu này áp dụng cho `editor@example.com` và `reader@example.com`; không sử dụng mật khẩu này trên môi trường thật.
+
+## 7. Bước 5: chạy server
 
 ```bash
 uvicorn app.main:app --reload
@@ -124,18 +143,12 @@ Kiểm tra:
 ### Tạo tài khoản admin
 
 Trong terminal tại `backend/`, chạy `python -m app.create_admin`. Lệnh sẽ hỏi email, tên và mật khẩu admin (tối thiểu 12 ký tự); mật khẩu được nhập ẩn và lưu dưới dạng Argon2 hash. Đăng ký công khai chỉ tạo role `member`.
-- Thêm 1 item ở `/docs` (hoặc từ frontend), rồi quay lại Workbench chạy `SELECT * FROM app_db.items;` sẽ thấy dòng mới.
 
-## 7. Danh sách API mẫu
+## 8. Danh sách API hiện có
 
 | Method | URL | Việc làm | Body (JSON) |
 |---|---|---|---|
 | GET | `/api/health` | Kiểm tra server + DB | |
-| GET | `/api/items` | Danh sách, tìm theo tên `?q=com` | |
-| GET | `/api/items/{id}` | Chi tiết | |
-| POST | `/api/items` | Thêm mới | `{"name": "Trà đá", "description": "...", "price": 5000}` |
-| PUT | `/api/items/{id}` | Sửa (gửi trường nào sửa trường đó) | `{"price": 6000}` |
-| DELETE | `/api/items/{id}` | Xoá | |
 | POST | `/api/auth/register` | Tạo tài khoản thành viên và nhận JWT | `{"name":"An","email":"an@example.com","password":"StrongPass123"}` |
 | POST | `/api/auth/login` | Đăng nhập và nhận JWT | `{"email":"an@example.com","password":"StrongPass123"}` |
 | GET | `/api/auth/me` | Lấy tài khoản hiện tại (Bearer JWT) | |
@@ -144,7 +157,7 @@ Khi lỗi, API trả về JSON dạng `{"detail": "..."}`. Ví dụ: 404 khi kh�
 
 JWT dùng HS256 và thời hạn cấu hình bởi `JWT_ACCESS_TOKEN_MINUTES`. Backend xác minh chữ ký, hạn token, trạng thái tài khoản và role từ database; không dựa vào role do frontend gửi lên.
 
-## 8. Frontend nối với backend thế nào?
+## 9. Frontend nối với backend thế nào?
 
 - Frontend gọi tới `http://127.0.0.1:8000/api/...` (cấu hình ở `frontend/js/config.js`).
 - Trình duyệt chặn web ở địa chỉ khác gọi API nếu backend không cho phép. Đó là **CORS**. Backend đã cho phép bằng `CORS_ORIGINS` trong `.env`:
@@ -152,20 +165,11 @@ JWT dùng HS256 và thời hạn cấu hình bởi `JWT_ACCESS_TOKEN_MINUTES`. B
   - Khi deploy, thêm chính xác domain frontend vào danh sách phân tách bằng dấu phẩy; không dùng `*` trên môi trường thật.
 - Sửa `.env` xong phải **tắt (`Ctrl + C`) và chạy lại** uvicorn.
 
-## 9. Thêm chức năng cho đề tài (vd: bảng `products`)
+## 10. Thêm bảng mới
 
-1. **Tạo bảng trong MySQL:** viết câu `CREATE TABLE products (...)` vào file mới `sql/products.sql`, chạy bằng Workbench như bước 1. Lưu file `.sql` lại để cả nhóm cùng chạy.
-2. `app/models/product.py`: copy `item.py`, đổi tên class, `__tablename__ = "products"` và các cột cho **giống bảng vừa tạo**.
-3. `app/models/__init__.py`: thêm `from app.models.product import Product`.
-4. `app/schemas/product.py`: copy `schemas/item.py`, sửa các trường.
-5. `app/crud/product.py`: copy `crud/item.py`, đổi `Item` thành `Product`.
-6. `app/routers/products.py`: copy `routers/items.py`, đổi `prefix="/products"`.
-7. `app/main.py`: thêm `app.include_router(products.router, prefix="/api")`.
-8. Chạy lại server, mở `/docs` sẽ thấy nhóm API **Products**.
+Tạo model trong `app/models/`, import model đó trong `app/models/__init__.py`, và cập nhật `sql/init.sql` (cùng migration nếu database đã chạy). `Base.metadata.create_all()` chỉ tạo bảng còn thiếu, không sửa schema của bảng đã tồn tại.
 
-> Mẹo: nếu quên bước 1, server cũng tự tạo bảng còn thiếu theo model khi khởi động. Nhưng nó **không sửa** bảng đã có. Muốn thêm/sửa cột, hãy dùng `ALTER TABLE ...` trong Workbench rồi sửa model cho khớp.
-
-## 10. Lỗi hay gặp
+## 11. Lỗi hay gặp
 
 | Lỗi | Cách sửa |
 |---|---|
@@ -178,6 +182,6 @@ JWT dùng HS256 và thời hạn cấu hình bởi `JWT_ACCESS_TOKEN_MINUTES`. B
 | Cổng 8000 đã bị dùng | `uvicorn app.main:app --reload --port 8001`, nhớ sửa `frontend/js/config.js` theo |
 | Tiếng Việt bị lỗi font trong DB | Database/bảng phải là `utf8mb4`. Tạo bằng `sql/init.sql` là đúng sẵn |
 
-## 11. (Không bắt buộc) Chạy MySQL bằng Docker
+## 12. (Không bắt buộc) Chạy MySQL bằng Docker
 
 Chỉ dành cho bạn nào đã biết Docker và không muốn cài MySQL. Trong `backend/` chạy `docker compose up -d`: MySQL chạy ở cổng **3307**, tự tạo bảng từ `sql/init.sql`. Khi đó sửa `.env` thành `DB_PORT=3307`, `DB_USER=app_user`, `DB_PASSWORD=app_password`.

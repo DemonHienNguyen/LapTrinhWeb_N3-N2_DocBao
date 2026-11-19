@@ -33,7 +33,7 @@ def create_access_token(user: User) -> str:
     claims = {
         "sub": str(user.id),
         "email": user.email,
-        "name": user.name,
+        "name": user.full_name,
         "role": user.role,
         "iat": now,
         "exp": expires_at,
@@ -65,7 +65,7 @@ def get_current_user(
         raise unauthorized
 
     user = db.get(User, user_id)
-    if user is None or not user.is_active:
+    if user is None or user.status != "active":
         raise unauthorized
     return user
 
