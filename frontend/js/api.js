@@ -1,5 +1,4 @@
-// Module gọi API bằng axios: cấu hình 1 lần, mọi trang dùng chung.
-// (axios được nạp từ CDN bằng thẻ <script> trong từng trang HTML, trước file này)
+// Module gọi API dùng fetch: mọi trang dùng chung và tự đính kèm JWT nếu có.
 //
 // Cách dùng (trong các file js/pages/*.js):
 //   const items = await api.get("/items");
@@ -14,54 +13,94 @@
 class ApiError extends Error {
   constructor(message, status, data) {
     super(message);
+    this.name = "ApiError";
     this.status = status; // mã HTTP: 404, 422, 500... (0 = không gọi được server)
     this.data = data; // nội dung lỗi gốc server trả về
   }
 }
 
-// Instance axios dùng chung: mọi request tự nối thêm baseURL phía trước
-const http = axios.create({
-  baseURL: CONFIG.API_BASE_URL,
-  timeout: 10000, // quá 10 giây không phản hồi thì báo lỗi
-  headers: { "Content-Type": "application/json" },
-});
-
-// Muốn gửi token đăng nhập cho mọi request (khi nhóm làm chức năng login), bỏ comment đoạn dưới:
-// http.interceptors.request.use((config) => {
-//   const token = localStorage.getItem("token");
-//   if (token) config.headers.Authorization = `Bearer ${token}`;
-//   return config;
-// });
-
-// Lấy câu thông báo lỗi dễ đọc từ response của FastAPI
 function getErrorMessage(data, status) {
+  if (status === 401) return "Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.";
+  if (status === 403) return "Bạn không có quyền thực hiện thao tác này.";
   if (data && typeof data.detail === "string") return data.detail;
-  // Lỗi 422 (dữ liệu không hợp lệ): detail là mảng [{ loc: [...], msg: "..." }]
   if (data && Array.isArray(data.detail)) {
-    return data.detail.map((e) => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join("; ");
+    return data.detail.map((error) => {
+      const location = Array.isArray(error.loc) ? error.loc[error.loc.length - 1] : "Dữ liệu";
+      return `${location}: ${error.msg}`;
+    }).join("; ");
   }
   return `Lỗi ${status}`;
 }
 
-// Gom xử lý lỗi một chỗ: đổi lỗi của axios thành ApiError dễ dùng
-http.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      // Server có trả lời nhưng là lỗi (4xx, 5xx)
-      const { status, data } = error.response;
-      return Promise.reject(new ApiError(getErrorMessage(data, status), status, data));
+function buildUrl(path, params) {
+  const url = new URL(`${CONFIG.API_BASE_URL.replace(/\/$/, "")}/${path.replace(/^\//, "")}`);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (Array.isArray(value)) {
+        value.forEach((entry) => url.searchParams.append(key, entry));
+      } else {
+        url.searchParams.set(key, value);
+      }
+    });
+  }
+  return url.toString();
+}
+
+async function request(path, { method = "GET", params, body, headers = {}, ...options } = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT_MS);
+  const requestHeaders = new Headers(headers);
+  const token = localStorage.getItem(CONFIG.AUTH_TOKEN_KEY);
+  if (token) requestHeaders.set("Authorization", `Bearer ${token}`);
+  if (body !== undefined && !requestHeaders.has("Content-Type")) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+  requestHeaders.set("Accept", "application/json");
+
+  let response;
+  try {
+    response = await fetch(buildUrl(path, params), {
+      ...options,
+      method,
+      headers: requestHeaders,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const message = error.name === "AbortError"
+      ? "Yêu cầu quá thời gian chờ. Vui lòng thử lại."
+      : "Không kết nối được backend. Backend đã chạy chưa? Kiểm tra CONFIG.API_BASE_URL.";
+    throw new ApiError(message, 0);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  let data = null;
+  if (response.status !== 204) {
+    const responseText = await response.text();
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { detail: responseText };
+      }
     }
-    // Không có response: server tắt, sai URL, bị chặn CORS, hoặc quá thời gian chờ
-    return Promise.reject(new ApiError(
-      "Không kết nối được backend. Backend đã chạy chưa? Kiểm tra CONFIG.API_BASE_URL.", 0,
-    ));
-  },
-);
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 && token) {
+      localStorage.removeItem(CONFIG.AUTH_TOKEN_KEY);
+    }
+    throw new ApiError(getErrorMessage(data, response.status), response.status, data);
+  }
+  return data;
+}
 
 const api = {
-  get: (path, params) => http.get(path, { params }).then((res) => res.data),
-  post: (path, body) => http.post(path, body).then((res) => res.data),
-  put: (path, body) => http.put(path, body).then((res) => res.data),
-  delete: (path) => http.delete(path).then((res) => res.data),
+  request,
+  get: (path, params) => request(path, { params }),
+  post: (path, body) => request(path, { method: "POST", body }),
+  put: (path, body) => request(path, { method: "PUT", body }),
+  delete: (path) => request(path, { method: "DELETE" }),
 };

@@ -19,7 +19,7 @@ async function loadItems() {
   tableBody.innerHTML = `<tr><td colspan="5" class="muted">Đang tải...</td></tr>`;
   try {
     const keyword = searchInput.value.trim();
-    // axios tự ghép params thành ?q=... (và tự mã hoá tiếng Việt)
+    // api tự ghép params thành query string và mã hoá giá trị tìm kiếm.
     const items = await api.get("/items", keyword ? { q: keyword } : undefined);
     renderItems(items);
   } catch (error) {

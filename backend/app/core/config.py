@@ -4,13 +4,14 @@ Muốn thêm cấu hình mới: thêm 1 dòng vào class Settings + thêm vào .
 """
 from urllib.parse import quote_plus
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    APP_NAME: str = "KS25 Base API"
+    APP_NAME: str = "Tin Tức 24h API"
 
     DB_HOST: str = "127.0.0.1"
     DB_PORT: int = 3306
@@ -20,6 +21,9 @@ class Settings(BaseSettings):
 
     # Chuỗi các origin cách nhau bằng dấu phẩy, hoặc "*"
     CORS_ORIGINS: str = "*"
+
+    JWT_SECRET_KEY: str = Field(min_length=32)
+    JWT_ACCESS_TOKEN_MINUTES: int = Field(default=60, ge=5, le=1440)
 
     @property
     def database_url(self) -> str:

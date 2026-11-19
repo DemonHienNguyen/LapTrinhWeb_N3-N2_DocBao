@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập | Tin Tức 24h</title>
+  <link rel="icon" href="../assets/images/logo.svg">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="auth-page" data-root="../">
+  <main class="auth-screen">
+    <a class="auth-brand" href="../index.html">TIN TỨC<span>24H</span></a>
+    <section class="auth-card" aria-labelledby="login-title">
+      <h1 class="auth-title" id="login-title">Đăng nhập</h1>
+      <p class="auth-subtitle">Đăng nhập để tiếp tục đọc và quản lý tài khoản của bạn.</p>
+      <form class="auth-form" id="login-form">
+        <div class="auth-field">
+          <input id="login-email" name="email" type="email" autocomplete="username" required placeholder=" ">
+          <label for="login-email">Email</label>
+          <span aria-hidden="true"></span>
+        </div>
+        <div class="auth-field">
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required placeholder=" ">
+          <label for="login-password">Mật khẩu</label>
+          <span aria-hidden="true"></span>
+        </div>
+        <p class="auth-error" id="login-error" role="alert" hidden></p>
+        <button class="auth-submit" id="login-submit" type="submit">Đăng nhập</button>
+        <p class="auth-switch">Chưa có tài khoản? <a href="register.html">Đăng ký thành viên</a></p>
+        <a class="auth-back" href="../index.html">← Trở về trang chủ</a>
+      </form>
+    </section>
+  </main>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/pages/login.js"></script>
+</body>
+</html>
