@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang cá nhân | Tin Tức 24h</title>
+  <link rel="icon" href="../assets/images/logo.svg">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../">
+  <header id="app-header"></header>
+
+  <main class="container dashboard-layout" id="profile-dashboard" hidden>
+    <aside class="dashboard-sidebar" aria-label="Điều hướng trang cá nhân">
+      <a class="dashboard-brand" href="../index.html">TIN TỨC<span>24H</span></a>
+      <p class="dashboard-label">KHU VỰC THÀNH VIÊN</p>
+      <nav class="dashboard-nav">
+        <a class="is-current" href="profile.html" aria-current="page">Tổng quan</a>
+        <a href="../index.html#latest">Tin đã lưu</a>
+        <a class="admin-only-link" id="profile-admin-link" href="admin.html" hidden>Quản trị</a>
+      </nav>
+      <button class="dashboard-logout" type="button" data-logout>Đăng xuất</button>
+    </aside>
+
+    <section class="dashboard-main">
+      <p class="section-kicker">TÀI KHOẢN CỦA BẠN</p>
+      <h1>Xin chào, <span id="profile-name">Thành viên</span></h1>
+      <p class="dashboard-intro">Quản lý thông tin tài khoản và các hoạt động đọc tin của bạn.</p>
+
+      <section class="dashboard-card">
+        <div class="dashboard-card-heading">
+          <div>
+            <p class="section-kicker">HỒ SƠ</p>
+            <h2>Thông tin cá nhân</h2>
+          </div>
+          <span class="role-badge" id="profile-role">Thành viên</span>
+        </div>
+        <dl class="profile-details">
+          <div><dt>Họ tên / tài khoản</dt><dd id="profile-name-detail">—</dd></div>
+          <div><dt>Email</dt><dd id="profile-email">Chưa có trong token</dd></div>
+          <div><dt>Mã người dùng</dt><dd id="profile-subject">—</dd></div>
+        </dl>
+      </section>
+
+      <section class="dashboard-card dashboard-hint">
+        <h2>Góc đọc của bạn</h2>
+        <p>Trang quản lý bài viết đã lưu sẽ được kết nối khi có API tương ứng.</p>
+        <a class="article-back-link" href="../index.html#latest">Khám phá tin mới →</a>
+      </section>
+    </section>
+  </main>
+
+  <footer id="app-footer"></footer>
+  <script src="../js/config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/pages/profile.js"></script>
+</body>
+</html>

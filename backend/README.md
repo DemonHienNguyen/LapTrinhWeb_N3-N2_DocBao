@@ -4,6 +4,8 @@ Khung backend chung cho các nhóm thực tập lớp **HN-KS25-CNTT1**. Đã c�
 
 - Kết nối **MySQL** bằng SQLAlchemy + PyMySQL, cấu hình đọc từ file `.env`
 - **CRUD mẫu** cho bảng `items` (thêm / xem / sửa / xoá / tìm kiếm)
+- Đăng ký thành viên, đăng nhập JWT và API lấy thông tin tài khoản hiện tại
+- Mật khẩu được băm bằng Argon2; admin được tạo riêng bằng lệnh CLI, không thể đăng ký qua form công khai
 - Endpoint **health-check** `GET /api/health` kiểm tra kết nối DB
 - **CORS** đã bật để frontend gọi được
 - File `sql/init.sql` tạo database + bảng + dữ liệu mẫu, chạy bằng **MySQL Workbench**
@@ -24,12 +26,15 @@ Kiểm tra Python: mở terminal gõ `python --version` (Mac: `python3 --version
 backend/
 ├── app/
 │   ├── main.py            # Điểm khởi động: tạo app, bật CORS, gắn các router
-│   ├── core/config.py     # Đọc cấu hình từ .env
+│   ├── core/
+│   │   ├── config.py      # Đọc cấu hình từ .env
+│   │   └── security.py    # Băm mật khẩu, JWT và kiểm tra quyền
 │   ├── db/session.py      # Kết nối MySQL, hàm get_db()
-│   ├── models/            # Model = bảng trong DB (item.py)
-│   ├── schemas/           # Schema = dữ liệu vào/ra của API (item.py)
-│   ├── crud/              # Hàm đọc/ghi DB (item.py)
-│   └── routers/           # Khai báo các API (health.py, items.py)
+│   ├── models/            # Model bảng items và users
+│   ├── schemas/           # Schema request/response cho API
+│   ├── crud/              # Truy vấn items và users
+│   ├── routers/           # API health, items và auth
+│   └── create_admin.py    # Tạo tài khoản admin bằng prompt an toàn
 ├── sql/init.sql           # Tạo database + bảng + dữ liệu mẫu (chạy bằng Workbench)
 ├── requirements.txt       # Danh sách thư viện Python
 ├── .env.example           # Mẫu file cấu hình
@@ -64,7 +69,7 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Mở file `.env`, điền **mật khẩu root MySQL** của bạn:
+Mở file `.env`, điền **mật khẩu root MySQL** và sinh khóa JWT riêng:
 
 ```
 DB_HOST=127.0.0.1
@@ -72,7 +77,11 @@ DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=mat_khau_root_cua_ban
 DB_NAME=app_db
+JWT_SECRET_KEY=...
+JWT_ACCESS_TOKEN_MINUTES=60
 ```
+
+Sinh giá trị `JWT_SECRET_KEY` bằng lệnh `python -c "import secrets; print(secrets.token_urlsafe(48))"` rồi dán vào `.env`. Khóa có tối thiểu 32 ký tự và không được commit hoặc chia sẻ. File `.env` đã được bỏ qua bởi `.gitignore`.
 
 ## 5. Bước 3: cài thư viện Python
 
@@ -111,6 +120,10 @@ Kiểm tra:
 
 - http://127.0.0.1:8000/api/health → `{"status":"ok","database":"connected"}`
 - http://127.0.0.1:8000/docs → thử trực tiếp mọi API bằng nút **Try it out**
+
+### Tạo tài khoản admin
+
+Trong terminal tại `backend/`, chạy `python -m app.create_admin`. Lệnh sẽ hỏi email, tên và mật khẩu admin (tối thiểu 12 ký tự); mật khẩu được nhập ẩn và lưu dưới dạng Argon2 hash. Đăng ký công khai chỉ tạo role `member`.
 - Thêm 1 item ở `/docs` (hoặc từ frontend), rồi quay lại Workbench chạy `SELECT * FROM app_db.items;` sẽ thấy dòng mới.
 
 ## 7. Danh sách API mẫu
@@ -123,15 +136,20 @@ Kiểm tra:
 | POST | `/api/items` | Thêm mới | `{"name": "Trà đá", "description": "...", "price": 5000}` |
 | PUT | `/api/items/{id}` | Sửa (gửi trường nào sửa trường đó) | `{"price": 6000}` |
 | DELETE | `/api/items/{id}` | Xoá | |
+| POST | `/api/auth/register` | Tạo tài khoản thành viên và nhận JWT | `{"name":"An","email":"an@example.com","password":"StrongPass123"}` |
+| POST | `/api/auth/login` | Đăng nhập và nhận JWT | `{"email":"an@example.com","password":"StrongPass123"}` |
+| GET | `/api/auth/me` | Lấy tài khoản hiện tại (Bearer JWT) | |
 
 Khi lỗi, API trả về JSON dạng `{"detail": "..."}`. Ví dụ: 404 khi không tìm thấy, 422 khi dữ liệu gửi lên sai.
+
+JWT dùng HS256 và thời hạn cấu hình bởi `JWT_ACCESS_TOKEN_MINUTES`. Backend xác minh chữ ký, hạn token, trạng thái tài khoản và role từ database; không dựa vào role do frontend gửi lên.
 
 ## 8. Frontend nối với backend thế nào?
 
 - Frontend gọi tới `http://127.0.0.1:8000/api/...` (cấu hình ở `frontend/js/config.js`).
 - Trình duyệt chặn web ở địa chỉ khác gọi API nếu backend không cho phép. Đó là **CORS**. Backend đã cho phép bằng `CORS_ORIGINS` trong `.env`:
-  - `CORS_ORIGINS=*` cho phép mọi nơi (mặc định, tiện khi học)
-  - Khi deploy thật, ghi rõ domain: `CORS_ORIGINS=https://nhom1.example.com`
+  - File `.env.example` đã khai báo hai origin Live Server cục bộ.
+  - Khi deploy, thêm chính xác domain frontend vào danh sách phân tách bằng dấu phẩy; không dùng `*` trên môi trường thật.
 - Sửa `.env` xong phải **tắt (`Ctrl + C`) và chạy lại** uvicorn.
 
 ## 9. Thêm chức năng cho đề tài (vd: bảng `products`)

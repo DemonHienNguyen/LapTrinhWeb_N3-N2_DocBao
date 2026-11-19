@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Đọc bài viết trên Tin Tức 24h">
+  <title>Bài viết | Tin Tức 24h</title>
+  <link rel="icon" href="../assets/images/logo.svg">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-root="../">
+  <header id="app-header"></header>
+
+  <main class="article-page">
+    <section class="article-masthead" id="article-masthead">
+      <div class="container article-masthead-inner">
+        <a class="back-home" href="../index.html#latest">← Tất cả tin mới</a>
+        <p class="article-category" id="article-category"></p>
+        <h1 id="article-title"></h1>
+        <p class="article-byline" id="article-byline"></p>
+      </div>
+    </section>
+
+    <figure class="container article-cover-wrap" id="article-cover-wrap">
+      <img class="article-cover" id="article-cover" alt="">
+      <figcaption>Ảnh minh hoạ</figcaption>
+    </figure>
+
+    <article class="container article-content" id="article-content">
+      <p class="article-lead" id="article-excerpt"></p>
+      <div class="article-body" id="article-body"></div>
+      <p class="article-sample-note">Bài viết mẫu dùng để trình bày giao diện.</p>
+      <a class="article-back-link" href="../index.html#latest">← Quay lại danh sách tin</a>
+    </article>
+
+    <section class="container article-not-found" id="article-not-found" hidden>
+      <h1>Không tìm thấy bài viết</h1>
+      <p>Bài viết có thể đã được gỡ hoặc đường dẫn không chính xác.</p>
+      <a class="btn btn-primary" href="../index.html#latest">Về trang chủ</a>
+    </section>
+  </main>
+
+  <footer id="app-footer"></footer>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/news-data.js"></script>
+  <script src="../js/pages/article.js"></script>
+</body>
+</html>
