@@ -44,7 +44,19 @@ class AuthEndpointTests(unittest.TestCase):
         self.assertEqual(result.user.name, "News Reader")
         self.assertEqual(result.user.email, "reader@example.com")
         user = get_user_by_email(self.db, "reader@example.com")
+        self.assertEqual(user.full_name, "News Reader")
+        self.assertEqual(user.status, "active")
+        self.assertIsNone(user.avatar_url)
         self.assertNotEqual(user.password_hash, "StrongPass123")
+        self.assertTrue({
+            "users",
+            "categories",
+            "articles",
+            "article_images",
+            "comments",
+            "tags",
+            "article_tags",
+        }.issubset(Base.metadata.tables))
         claims = jwt.decode(result.access_token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         self.assertEqual(claims["role"], "member")
         self.assertEqual(claims["sub"], str(user.id))
@@ -108,7 +120,7 @@ class AuthEndpointTests(unittest.TestCase):
 
         admin = create_user(
             self.db,
-            name="Admin",
+            full_name="Admin",
             email="admin@example.com",
             password_hash=hash_password("AdminStrongPass123"),
             role="admin",

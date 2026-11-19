@@ -28,7 +28,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     try:
         user = user_crud.create_user(
             db,
-            name=data.name,
+            full_name=data.name,
             email=data.email,
             password_hash=hash_password(data.password),
             role="member",
@@ -44,7 +44,9 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=AuthResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = user_crud.get_user_by_email(db, data.email)
-    if user is None or not user.is_active or not verify_password(data.password, user.password_hash):
+    if user is None or user.status != "active" or not verify_password(
+        data.password, user.password_hash
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email hoặc mật khẩu không đúng",

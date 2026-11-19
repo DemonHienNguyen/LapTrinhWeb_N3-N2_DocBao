@@ -11,12 +11,12 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 def create_user(
     db: Session,
     *,
-    name: str,
+    full_name: str,
     email: str,
     password_hash: str,
     role: str = "member",
 ) -> User:
-    user = User(name=name, email=email, password_hash=password_hash, role=role)
+    user = User(full_name=full_name, email=email, password_hash=password_hash, role=role)
     db.add(user)
     db.commit()
     db.refresh(user)
