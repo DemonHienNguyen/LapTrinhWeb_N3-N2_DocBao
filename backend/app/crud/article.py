@@ -1,4 +1,4 @@
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.article import Article
@@ -78,3 +78,44 @@ def list_published_articles(
     )
     items = list(db.scalars(stmt))
     return items, total
+
+
+def get_published_article_by_slug(
+    db: Session,
+    slug: str,
+    *,
+    increment_views: bool = True,
+    related_limit: int = 4,
+) -> tuple[Article | None, list[Article]]:
+    """Lấy chi tiết bài viết đã xuất bản theo slug, tăng lượt xem và trả về bài liên quan."""
+    stmt = (
+        select(Article)
+        .options(*_article_eager_options(), selectinload(Article.images))
+        .where(Article.slug == slug, Article.status == "published")
+    )
+    article = db.scalar(stmt)
+    if article is None:
+        return None, []
+
+    if increment_views:
+        db.execute(
+            update(Article)
+            .where(Article.id == article.id)
+            .values(views_count=Article.views_count + 1)
+        )
+        db.commit()
+        db.refresh(article)
+
+    related_stmt = (
+        select(Article)
+        .options(*_article_eager_options())
+        .where(
+            Article.status == "published",
+            Article.category_id == article.category_id,
+            Article.id != article.id,
+        )
+        .order_by(Article.created_at.desc(), Article.id.desc())
+        .limit(related_limit)
+    )
+    related_articles = list(db.scalars(related_stmt))
+    return article, related_articles
