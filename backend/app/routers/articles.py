@@ -1,12 +1,12 @@
 import math
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.crud import article as article_crud
 from app.db.session import get_db
 from app.models.article import Article
-from app.schemas.article import ArticleListOut, ArticleSummaryOut
+from app.schemas.article import ArticleDetailOut, ArticleListOut, ArticleSummaryOut
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
 
@@ -64,4 +64,25 @@ def get_articles(
         page=page,
         limit=limit,
         total_pages=total_pages,
+    )
+
+
+@router.get("/{slug}", response_model=ArticleDetailOut)
+def get_article_detail(slug: str, db: Session = Depends(get_db)):
+    """Lấy chi tiết bài viết theo slug, tự động tăng lượt xem và kèm bài liên quan."""
+    article, related = article_crud.get_published_article_by_slug(db, slug)
+    if article is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy bài viết",
+        )
+
+    summary_data = _serialize_summary(article).model_dump()
+    return ArticleDetailOut(
+        **summary_data,
+        content=article.content,
+        status=article.status,
+        updated_at=article.updated_at,
+        images=article.images,
+        related_articles=[_serialize_summary(item) for item in related],
     )
