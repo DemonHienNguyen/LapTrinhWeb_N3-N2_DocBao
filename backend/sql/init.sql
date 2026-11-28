@@ -89,3 +89,13 @@ CREATE TABLE IF NOT EXISTS article_tags (
   CONSTRAINT fk_article_tags_tag FOREIGN KEY (tag_id)
     REFERENCES tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  jti        VARCHAR(64) NOT NULL UNIQUE,
+  user_id    INT NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX ix_revoked_tokens_jti (jti),
+  CONSTRAINT fk_revoked_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
