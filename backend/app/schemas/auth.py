@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -21,6 +21,13 @@ class RegisterRequest(BaseModel):
     @classmethod
     def normalize_email(cls, value: EmailStr) -> str:
         return str(value).strip().lower()
+
+    @field_validator("password", mode="before")
+    @classmethod
+    def validate_password(cls, value: Any) -> Any:
+        if isinstance(value, str) and len(value) < 8:
+            raise ValueError("Mật khẩu phải có tối thiểu 8 ký tự")
+        return value
 
 
 class LoginRequest(BaseModel):

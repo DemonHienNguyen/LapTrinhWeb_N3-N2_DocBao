@@ -1,9 +1,17 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.config import settings
-from app.core.security import create_access_token, get_current_user, hash_password, verify_password
+from app.core.security import (
+    bearer_scheme,
+    create_access_token,
+    get_current_user,
+    hash_password,
+    revoke_access_token,
+    verify_password,
+)
 from app.crud import user as user_crud
 from app.db.session import get_db
 from app.models.user import User
@@ -44,15 +52,29 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=AuthResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = user_crud.get_user_by_email(db, data.email)
-    if user is None or user.status != "active" or not verify_password(
-        data.password, user.password_hash
-    ):
+    if user is None or not verify_password(data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email hoặc mật khẩu không đúng",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
+        )
     return build_auth_response(user)
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if credentials is not None:
+        revoke_access_token(db, credentials.credentials, user_id=user.id)
+    return {"message": "Đăng xuất thành công"}
 
 
 @router.get("/me", response_model=UserOut)

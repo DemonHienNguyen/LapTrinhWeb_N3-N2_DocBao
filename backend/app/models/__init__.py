@@ -7,3 +7,4 @@ from app.models.article_image import ArticleImage  # noqa: F401
 from app.models.comment import Comment  # noqa: F401
 from app.models.tag import Tag  # noqa: F401
 from app.models.article_tag import ArticleTag  # noqa: F401
+from app.models.revoked_token import RevokedToken  # noqa: F401
